@@ -3,24 +3,41 @@ name: "Mihoyo SignIn"
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 22 * * *"
+    # GitHub Actions cron 使用 UTC。UTC 00:00 = 北京时间 08:00
+    - cron: "0 0 * * *"
+
+permissions:
+  contents: read
+
+# 同一时间只允许一个实例运行，避免重复签到
+concurrency:
+  group: mihoyo-signin
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
-          node-version: '12.x'
-      - name: install packages 
+          node-version: '20'
+
+      - name: Install packages
         run: npm install
-      - name: run sign
+
+      - name: Run sign
         run: node dist/main.js
         env:
-          COOKIE_STRING: ${{secrets.COOKIE_STRING}}
-          QY_WECHAT: ${{secrets.QY_WECHAT}}
-      - uses: actions/upload-artifact@v2
+          COOKIE_STRING: ${{ secrets.COOKIE_STRING }}
+          QY_WECHAT: ${{ secrets.QY_WECHAT }}
+
+      - name: Upload log
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: mihoyo-log
           path: log/mihoyo.log
+          if-no-files-found: warn
+          retention-days: 14
